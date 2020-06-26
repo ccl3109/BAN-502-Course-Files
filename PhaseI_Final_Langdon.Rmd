@@ -1,0 +1,713 @@
+---
+title: "Untitled"
+output:
+  word_document: default
+  html_document: default
+---
+
+## Phase I - Course Project
+
+```{r}
+options(tidyverse.quiet = TRUE)
+#install.packages(c("flexdashboard", "tidyverse", "mice", "VIM", "ranger", "caret"))
+library(flexdashboard)
+library(tidyverse)
+library(mice)
+library(VIM)
+library(ranger)
+library(caret)
+library(lubridate)
+```
+```
+
+```{r}
+chicago <- read_csv("chicago2.csv")
+```
+
+```{r}
+chicago <- dplyr::select(chicago, -c(ID, `Case Number`, `Updated On`, `X Coordinate`, `Y Coordinate`, Location)) #delete the following columns
+```
+
+```{r}
+chicago <- chicago %>% mutate(Date = mdy_hms(Date)) #convert the Date object to an 
+#appropriate R Date/Time object
+```
+
+```{r}
+chicago <- chicago %>% mutate(Hour = hour(Date)) #creates new variable in dataset with the 
+#hour extracted from each date/time
+```
+
+```{r}
+chicago <- chicago %>% mutate(Day = day(Date)) #creates new variable in dataset with the 
+#day extracted from each date/time
+```
+
+```{r}
+chicago <- chicago %>% mutate(Month = month(Date)) #creates new variable in dataset with the 
+#month extracted from each date/time
+```
+
+```{r}
+chicago <- chicago %>% mutate(Hour = as_factor(as.character(Hour))) %>% 
+  mutate(Hour = fct_recode(Hour,
+   "midnight-1AM" = "0",
+   "1AM-2AM" = "1",
+   "2AM-3AM" = "2",
+   "3AM-4AM" = "3",
+   "4AM-5AM" = "4",
+   "5AM-6AM" = "5",
+   "6AM-7AM" = "6",
+   "7AM-8AM" = "7",
+   "8AM-9AM" = "8",
+   "9AM-10AM" = "9",
+   "10AM-11AM" = "10",
+   "11AM-noon" = "11",
+   "noon-1PM" = "12",
+   "1PM-2PM" = "13",
+   "2PM-3PM" = "14",
+   "3PM-4PM" = "15",
+   "4PM-5PM" = "16",
+   "5PM-6PM" = "17",
+   "6PM-7PM" = "18",
+   "7PM-8PM" = "19",
+   "8PM-9PM" = "20",
+   "9PM-10PM" = "21",
+   "10PM-11PM" = "22",
+   "11PM-midnight" = "23"))
+```
+
+```{r}
+chicago <- chicago %>% mutate(Month = as_factor(as.character(Month))) %>% 
+  mutate(Month = fct_recode(Month,
+   "January" = "1",
+   "February" = "2",
+   "March" = "3",
+   "April" = "4",
+   "May" = "5",
+   "June" = "6",
+   "July" = "7",
+   "August" = "8",
+   "September" = "9",
+   "October" = "10",
+   "November" = "11",
+   "December" = "12"))
+```
+
+```{r}
+chicago$DayofWeek <- paste(chicago$Month,chicago$Day)
+```
+
+```{r}
+chicago$PrimDesc <- paste(chicago$`Primary Type`,chicago$Description)
+```
+
+```{r}
+chicago <- chicago %>% mutate(DayofWeek = as_factor(as.character(DayofWeek))) %>% 
+  mutate(DayofWeek = fct_recode(DayofWeek,
+    "Monday" = "January 1",
+    "Tuesday" = "January 2",
+    "Wednesday" = "January 3",
+    "Thursday" = "January 4",
+    "Friday" = "January 5",
+    "Saturday" = "January 6",
+    "Sunday" = "January 7",
+    "Monday" = "January 8",
+    "Tuesday" = "January 9",
+    "Wednesday" = "January 10",
+    "Thursday" = "January 11",
+    "Friday" = "January 12",
+    "Saturday" = "January 13",
+    "Sunday" = "January 14",
+    "Monday" = "January 15",
+    "Tuesday" = "January 16",
+    "Wednesday" = "January 17",
+    "Thursday" = "January 18",
+    "Friday" = "January 19",
+    "Saturday" = "January 20",
+    "Sunday" = "January 21",
+    "Monday" = "January 22",
+    "Tuesday" = "January 23",
+    "Wednesday" = "January 24",
+    "Thursday" = "January 25",
+    "Friday" = "January 26",
+    "Saturday" = "January 27",
+    "Sunday" = "January 28",
+    "Monday" = "January 29",
+    "Tuesday" = "January 30",
+    "Wednesday" = "January 31"))
+```
+
+```{r}
+chicago <- chicago %>% mutate(DayofWeek = as_factor(as.character(DayofWeek))) %>% 
+  mutate(DayofWeek = fct_recode(DayofWeek,
+    "Thursday" = "February 1",
+    "Friday" = "February 2",
+    "Saturday" = "February 3",
+    "Sunday" = "February 4",
+    "Monday" = "February 5",
+    "Tuesday" = "February 6",
+    "Wednesday" = "February 7",
+    "Thursday" = "February 8",
+    "Friday" = "February 9",
+    "Saturday" = "February 10",
+    "Sunday" = "February 11",
+    "Monday" = "February 12",
+    "Tuesday" = "February 13",
+    "Wednesday" = "February 14",
+    "Thursday" = "February 15",
+    "Friday" = "February 16",
+    "Saturday" = "February 17",
+    "Sunday" = "February 18",
+    "Monday" = "February 19",
+    "Tuesday" = "February 20",
+    "Wednesday" = "February 21",
+    "Thursday" = "February 22",
+    "Friday" = "February 23",
+    "Saturday" = "February 24",
+    "Sunday" = "February 25",
+    "Monday" = "February 26",
+    "Tuesday" = "February 27",
+    "Wednesday" = "February 28"))
+```
+
+```{r}
+chicago <- chicago %>% mutate(DayofWeek = as_factor(as.character(DayofWeek))) %>% 
+  mutate(DayofWeek = fct_recode(DayofWeek,
+    "Thursday" = "March 1",
+    "Friday" = "March 2",
+    "Saturday" = "March 3",
+    "Sunday" = "March 4",
+    "Monday" = "March 5",
+    "Tuesday" = "March 6",
+    "Wednesday" = "March 7",
+    "Thursday" = "March 8",
+    "Friday" = "March 9",
+    "Saturday" = "March 10",
+    "Sunday" = "March 11",
+    "Monday" = "March 12",
+    "Tuesday" = "March 13",
+    "Wednesday" = "March 14",
+    "Thursday" = "March 15",
+    "Friday" = "March 16",
+    "Saturday" = "March 17",
+    "Sunday" = "March 18",
+    "Monday" = "March 19",
+    "Tuesday" = "March 20",
+    "Wednesday" = "March 21",
+    "Thursday" = "March 22",
+    "Friday" = "March 23",
+    "Saturday" = "March 24",
+    "Sunday" = "March 25",
+    "Monday" = "March 26",
+    "Tuesday" = "March 27",
+    "Wednesday" = "March 28",
+    "Thursday" = "March 29",
+    "Friday" = "March 30",
+    "Saturday" = "March 31"))
+```
+
+```{r}
+chicago <- chicago %>% mutate(DayofWeek = as_factor(as.character(DayofWeek))) %>% 
+  mutate(DayofWeek = fct_recode(DayofWeek,
+    "Sunday" = "April 1",
+    "Monday" = "April 2",
+    "Tuesday" = "April 3",
+    "Wednesday" = "April 4",
+    "Thursday" = "April 5",
+    "Friday" = "April 6",
+    "Saturday" = "April 7",
+    "Sunday" = "April 8",
+    "Monday" = "April 9",
+    "Tuesday" = "April 10",
+    "Wednesday" = "April 11",
+    "Thursday" = "April 12",
+    "Friday" = "April 13",
+    "Saturday" = "April 14",
+    "Sunday" = "April 15",
+    "Monday" = "April 16",
+    "Tuesday" = "April 17",
+    "Wednesday" = "April 18",
+    "Thursday" = "April 19",
+    "Friday" = "April 20",
+    "Saturday" = "April 21",
+    "Sunday" = "April 22",
+    "Monday" = "April 23",
+    "Tuesday" = "April 24",
+    "Wednesday" = "April 25",
+    "Thursday" = "April 26",
+    "Friday" = "April 27",
+    "Saturday" = "April 28",
+    "Sunday" = "April 29",
+    "Monday" = "April 30"))
+```
+
+```{r}
+chicago <- chicago %>% mutate(DayofWeek = as_factor(as.character(DayofWeek))) %>% 
+  mutate(DayofWeek = fct_recode(DayofWeek,
+    "Tuesday" = "May 1",
+    "Wednesday" = "May 2",
+    "Thursday" = "May 3",
+    "Friday" = "May 4",
+    "Saturday" = "May 5",
+    "Sunday" = "May 6",
+    "Monday" = "May 7",
+    "Tuesday" = "May 8",
+    "Wednesday" = "May 9",
+    "Thursday" = "May 10",
+    "Friday" = "May 11",
+    "Saturday" = "May 12",
+    "Sunday" = "May 13",
+    "Monday" = "May 14",
+    "Tuesday" = "May 15",
+    "Wednesday" = "May 16",
+    "Thursday" = "May 17",
+    "Friday" = "May 18",
+    "Saturday" = "May 19",
+    "Sunday" = "May 20",
+    "Monday" = "May 21",
+    "Tuesday" = "May 22",
+    "Wednesday" = "May 23",
+    "Thursday" = "May 24",
+    "Friday" = "May 25",
+    "Saturday" = "May 26",
+    "Sunday" = "May 27",
+    "Monday" = "May 28",
+    "Tuesday" = "May 29",
+    "Wednesday" = "May 30",
+    "Thursday" = "May 31"))
+```
+
+```{r}
+chicago <- chicago %>% mutate(DayofWeek = as_factor(as.character(DayofWeek))) %>% 
+  mutate(DayofWeek = fct_recode(DayofWeek,
+    "Friday" = "June 1",
+    "Saturday" = "June 2",
+    "Sunday" = "June 3",
+    "Monday" = "June 4",
+    "Tuesday" = "June 5",
+    "Wednesday" = "June 6",
+    "Thursday" = "June 7",
+    "Friday" = "June 8",
+    "Saturday" = "June 9",
+    "Sunday" = "June 10",
+    "Monday" = "June 11",
+    "Tuesday" = "June 12",
+    "Wednesday" = "June 13",
+    "Thursday" = "June 14",
+    "Friday" = "June 15",
+    "Saturday" = "June 16",
+    "Sunday" = "June 17",
+    "Monday" = "June 18",
+    "Tuesday" = "June 19",
+    "Wednesday" = "June 20",
+    "Thursday" = "June 21",
+    "Friday" = "June 22",
+    "Saturday" = "June 23",
+    "Sunday" = "June 24",
+    "Monday" = "June 25",
+    "Tuesday" = "June 26",
+    "Wednesday" = "June 27",
+    "Thursday" = "June 28",
+    "Friday" = "June 29",
+    "Saturday" = "June 30"))
+```
+
+```{r}
+chicago <- chicago %>% mutate(DayofWeek = as_factor(as.character(DayofWeek))) %>% 
+  mutate(DayofWeek = fct_recode(DayofWeek,
+    "Sunday" = "July 1",
+    "Monday" = "July 2",
+    "Tuesday" = "July 3",
+    "Wednesday" = "July 4",
+    "Thursday" = "July 5",
+    "Friday" = "July 6",
+    "Saturday" = "July 7",
+    "Sunday" = "July 8",
+    "Monday" = "July 9",
+    "Tuesday" = "July 10",
+    "Wednesday" = "July 11",
+    "Thursday" = "July 12",
+    "Friday" = "July 13",
+    "Saturday" = "July 14",
+    "Sunday" = "July 15",
+    "Monday" = "July 16",
+    "Tuesday" = "July 17",
+    "Wednesday" = "July 18",
+    "Thursday" = "July 19",
+    "Friday" = "July 20",
+    "Saturday" = "July 21",
+    "Sunday" = "July 22",
+    "Monday" = "July 23",
+    "Tuesday" = "July 24",
+    "Wednesday" = "July 25",
+    "Thursday" = "July 26",
+    "Friday" = "July 27",
+    "Saturday" = "July 28",
+    "Sunday" = "July 29",
+    "Monday" = "July 30",
+    "Tuesday" = "July 31"))                                
+```
+
+```{r}
+chicago <- chicago %>% mutate(DayofWeek = as_factor(as.character(DayofWeek))) %>% 
+  mutate(DayofWeek = fct_recode(DayofWeek,
+    "Wednesday" = "August 1",
+    "Thursday" = "August 2",
+    "Friday" = "August 3",
+    "Saturday" = "August 4",
+    "Sunday" = "August 5",
+    "Monday" = "August 6",
+    "Tuesday" = "August 7",
+    "Wednesday" = "August 8",
+    "Thursday" = "August 9",
+    "Friday" = "August 10",
+    "Saturday" = "August 11",
+    "Sunday" = "August 12",
+    "Monday" = "August 13",
+    "Tuesday" = "August 14",
+    "Wednesday" = "August 15",
+    "Thursday" = "August 16",
+    "Friday" = "August 17",
+    "Saturday" = "August 18",
+    "Sunday" = "August 19",
+    "Monday" = "August 20",
+    "Tuesday" = "August 21",
+    "Wednesday" = "August 22",
+    "Thursday" = "August 23",
+    "Friday" = "August 24",
+    "Saturday" = "August 25",
+    "Sunday" = "August 26",
+    "Monday" = "August 27",
+    "Tuesday" = "August 28",
+    "Wednesday" = "August 29",
+    "Thursday" = "August 30",
+    "Friday" = "August 31"))
+```
+
+```{r}
+chicago <- chicago %>% mutate(DayofWeek = as_factor(as.character(DayofWeek))) %>% 
+  mutate(DayofWeek = fct_recode(DayofWeek,
+    "Saturday" = "September 1",
+    "Sunday" = "September 2",
+    "Monday" = "September 3",
+    "Tuesday" = "September 4",
+    "Wednesday" = "September 5",
+    "Thursday" = "September 6",
+    "Friday" = "September 7",
+    "Saturday" = "September 8",
+    "Sunday" = "September 9",
+    "Monday" = "September 10",
+    "Tuesday" = "September 11",
+    "Wednesday" = "September 12",
+    "Thursday" = "September 13",
+    "Friday" = "September 14",
+    "Saturday" = "September 15",
+    "Sunday" = "September 16",
+    "Monday" = "September 17",
+    "Tuesday" = "September 18",
+    "Wednesday" = "September 19",
+    "Thursday" = "September 20",
+    "Friday" = "September 21",
+    "Saturday" = "September 22",
+    "Sunday" = "September 23",
+    "Monday" = "September 24",
+    "Tuesday" = "September 25",
+    "Wednesday" = "September 26",
+    "Thursday" = "September 27",
+    "Friday" = "September 28",
+    "Saturday" = "September 29",
+    "Sunday" = "September 30")) 
+```
+
+```{r}
+chicago <- chicago %>% mutate(DayofWeek = as_factor(as.character(DayofWeek))) %>% 
+  mutate(DayofWeek = fct_recode(DayofWeek,
+    "Monday" = "October 1",
+    "Tuesday" = "October 2",
+    "Wednesday" = "October 3",
+    "Thursday" = "October 4",
+    "Friday" = "October 5",
+    "Saturday" = "October 6",
+    "Sunday" = "October 7",
+    "Monday" = "October 8",
+    "Tuesday" = "October 9",
+    "Wednesday" = "October 10",
+    "Thursday" = "October 11",
+    "Friday" = "October 12",
+    "Saturday" = "October 13",
+    "Sunday" = "October 14",
+    "Monday" = "October 15",
+    "Tuesday" = "October 16",
+    "Wednesday" = "October 17",
+    "Thursday" = "October 18",
+    "Friday" = "October 19",
+    "Saturday" = "October 20",
+    "Sunday" = "October 21",
+    "Monday" = "October 22",
+    "Tuesday" = "October 23",
+    "Wednesday" = "October 24",
+    "Thursday" = "October 25",
+    "Friday" = "October 26",
+    "Saturday" = "October 27",
+    "Sunday" = "October 28",
+    "Monday" = "October 29",
+    "Tuesday" = "October 30",
+    "Wednesday" = "October 31"))
+```
+
+```{r}
+chicago <- chicago %>% mutate(DayofWeek = as_factor(as.character(DayofWeek))) %>% 
+  mutate(DayofWeek = fct_recode(DayofWeek,
+    "Thursday" = "November 1",
+    "Friday" = "November 2",
+    "Saturday" = "November 3",
+    "Sunday" = "November 4",
+    "Monday" = "November 5",
+    "Tuesday" = "November 6",
+    "Wednesday" = "November 7",
+    "Thursday" = "November 8",
+    "Friday" = "November 9",
+    "Saturday" = "November 10",
+    "Sunday" = "November 11",
+    "Monday" = "November 12",
+    "Tuesday" = "November 13",
+    "Wednesday" = "November 14",
+    "Thursday" = "November 15",
+    "Friday" = "November 16",
+    "Saturday" = "November 17",
+    "Sunday" = "November 18",
+    "Monday" = "November 19",
+    "Tuesday" = "November 20",
+    "Wednesday" = "November 21",
+    "Thursday" = "November 22",
+    "Friday" = "November 23",
+    "Saturday" = "November 24",
+    "Sunday" = "November 25",
+    "Monday" = "November 26",
+    "Tuesday" = "November 27",
+    "Wednesday" = "November 28",
+    "Thursday" = "November 29",
+    "Friday" = "November 30"))
+```
+
+```{r}
+chicago <- chicago %>% mutate(DayofWeek = as_factor(as.character(DayofWeek))) %>% 
+  mutate(DayofWeek = fct_recode(DayofWeek,
+    "Saturday" = "December 1",
+    "Sunday" = "December 2",
+    "Monday" = "December 3",
+    "Tuesday" = "December 4",
+    "Wednesday" = "December 5",
+    "Thursday" = "December 6",
+    "Friday" = "December 7",
+    "Saturday" = "December 8",
+    "Sunday" = "December 9",
+    "Monday" = "December 10",
+    "Tuesday" = "December 11",
+    "Wednesday" = "December 12",
+    "Thursday" = "December 13",
+    "Friday" = "December 14",
+    "Saturday" = "December 15",
+    "Sunday" = "December 16",
+    "Monday" = "December 17",
+    "Tuesday" = "December 18",
+    "Wednesday" = "December 19",
+    "Thursday" = "December 20",
+    "Friday" = "December 21",
+    "Saturday" = "December 22",
+    "Sunday" = "December 23",
+    "Monday" = "December 24",
+    "Tuesday" = "December 25",
+    "Wednesday" = "December 26",
+    "Thursday" = "December 27",
+    "Friday" = "December 28",
+    "Saturday" = "December 29",
+    "Sunday" = "December 30")) 
+```
+
+```{r}
+chicago <- chicago %>% mutate(`Community Area` = as_factor(as.character(`Community Area`))) %>% 
+  mutate(`Community Area` = fct_recode(`Community Area`,
+    "NOT LISTED" = "1",
+    "WEST RIDGE" = "2",
+    "NOT LISTED" = "3",
+    "LINCOLN SQUARE" = "4",
+    "NORTH CENTER" = "5",
+    "NOT LISTED" = "6",
+    "NOT LISTED" = "7",
+    "NOT LISTED" = "8",
+    "EDISON PARK" = "9",
+    "NOT LISTED" = "10",
+    "NOT LISTED" = "11",
+    "NOT LISTED" = "12",
+    "NOT LISTED" = "13",
+    "ALBANY PARK" = "14",
+    "PORTAGE PARK" = "15",
+    "IRVING PARK" = "16",
+    "NOT LISTED" = "17",
+    "MONTCLARE" = "18",
+    "BELMONT CRAGIN" = "19",
+    "HERMOSA" = "20",
+    "AVONDALE" = "21",
+    "LOGAN SQUARE" = "22",
+    "HUMBOLDT PARK" = "23",
+    "WEST TOWN" = "24",
+    "NOT LISTED" = "25",
+    "WEST GARFIELD PARK" = "26",
+    "EAST GARFIELD PARK" = "27",
+    "NEAR WEST SIDE" = "28",
+    "NORTH LAWNDALE" = "29",
+    "SOUTH LAWNDALE" = "30",
+    "LOWER WEST SIDE" = "31",
+    "LOOP" = "32",
+    "NOT LISTED" = "33",
+    "ARMOUR SQUARE" = "34",
+    "DOUGLAS" = "35",
+    "OAKLAND" = "36",
+    "FULLER PARK"  =  "37",
+    "GRAND BOULEVARD"  =  "38",
+    "KENWOOD"  =  "39",
+    "WASHINGTON PARK"  =  "40",
+    "HYDE PARK"  =  "41",
+    "NOT LISTED" = "42",
+    "NOT LISTED" = "43",
+    "CHATHAM"  =  "44",
+    "AVALON PARK"  =  "45",
+    "NOT LISTED" = "46",
+    "BURNSIDE"  =  "47",
+    "CALUMET HEIGHTS"  =  "48",
+    "ROSELAND"  =  "49",
+    "PULLMAN"  =  "50",
+    "SOUTH DEERING"  =  "51",
+    "NOT LISTED" = "52",
+    "NOT LISTED" = "53",
+    "RIVERDALE"  =  "54",
+    "HEGEWISCH"  =  "55",
+    "NOT LISTED" = "56",
+    "ARCHER HEIGHTS"  =  "57",
+    "BRIGHTON PARK"  =  "58",
+    "MCKINLEY PARK"  =  "59",
+    "BRIDGEPORT"  =  "60",
+    "NEW CITY"  =  "61",
+    "WEST ELSDON"  =  "62",
+    "GAGE PARK"  =  "63",
+    "CLEARING"  =  "64",
+    "WEST LAWN"  =  "65",
+    "CHICAGO LAWN"  =  "66",
+    "WEST ENGLEWOOD"  =  "67",
+    "ENGLEWOOD"  =  "68",
+    "GREATER GRAND CROSSING"  =  "69",
+    "ASHBURN"  =  "70",
+    "AUBURN GRESHAM"  =  "71",
+    "BEVERLY"  =  "72",
+    "WASHINGTON HEIGHTS"  =  "73",
+    "MOUNT GREENWOOD"  =  "74",
+    "MORGAN PARK"  =  "75",
+    "NOT LISTED" = "76",
+    "EDGEWATER"  =  "77"))
+    
+```
+
+```{r}
+vim_plot <- aggr(chicago, numbers = TRUE, prop = c(TRUE, FALSE), cex.axis = .7)
+```
+
+```{r}
+chicago <- chicago %>% drop_na() #delete any rows with an NA value
+```
+
+```{r}
+chicago <- dplyr::select(chicago, -c(X1, Date, Block, IUCR, `Primary Type`, Description, Beat, District, Ward, Year, Latitude, Longitude)) #delete the following columns
+```
+
+```{r}
+chicago <- chicago %>% mutate(`Location Description` = as_factor(as.character(`Location Description`))) #convert Location Description to a factor
+chicago <- chicago %>% mutate(Arrest = as_factor(as.character(Arrest)))
+chicago <- chicago %>% mutate(Domestic = as_factor(as.character(Domestic))) #convert Arrest to a factor
+chicago <- chicago %>% mutate(`Community Area` = as_factor(as.character(`Community Area`))) #convert Community Area to a factor
+chicago <- chicago %>% mutate(`FBI Code` = as_factor(as.character(`FBI Code`))) #convert FBI Code to a factor
+chicago <- chicago %>% mutate(Day = as_factor(as.character(Day)))
+chicago <- chicago %>% mutate(PrimDesc = as_factor(as.character(PrimDesc)))
+```
+
+```{r}
+ggplot(chicago, aes(x=`FBI Code`, fill=Arrest)) +
+  geom_bar(position = "fill") +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+```{r}
+ggplot(data = chicago) +
+  geom_bar(mapping = aes(x = Month, fill = Arrest)) +
+  theme(axis.text.x = element_text(angle = 45))
+```
+
+```{r}
+ggplot(data = chicago) +
+  geom_bar(mapping = aes(x = Hour, fill = Arrest)) +
+theme(axis.text.x = element_text(angle = 45))
+```
+
+
+```{r}
+ggplot(data = chicago) +
+  geom_bar(
+    mapping = aes(x = `Community Area`, fill = `Community Area`),
+    show.legend = FALSE,
+    width = 1
+  ) +
+  theme(aspect.ratio = .09) +
+  labs(x = NULL, y = NULL) +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+```{r}
+ggplot(data = chicago) +
+  geom_bar(
+    mapping = aes(x = Hour, fill = Hour),
+    show.legend = FALSE,
+    width = 1
+  ) +
+  theme(aspect.ratio = .2) +
+  labs(x = NULL, y = NULL) +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+```{r}
+ggplot(data = chicago) +
+  geom_bar(
+    mapping = aes(y=Arrest, fill = DayofWeek),
+    show.legend = TRUE,
+    width = 1
+  ) +
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL) +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+```{r}
+ggplot(data = chicago) +
+  geom_bar(
+    mapping = aes(x = DayofWeek, fill = DayofWeek),
+    show.legend = FALSE,
+    width = 1
+  ) +
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL) +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+
+```{r}
+ggplot(data = chicago) +
+  geom_bar(
+    mapping = aes(y=Arrest, fill = Month),
+    show.legend = TRUE,
+    width = 1
+  ) +
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL) +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
