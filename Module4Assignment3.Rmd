@@ -1,0 +1,100 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+
+### Random Forests
+
+```{r}
+options(tidyverse.quiet = TRUE)
+library(tidyverse)
+library(caret)
+library(ranger)
+```
+
+
+```{r}
+Blood <- read_csv("C:/Users/timbo/Documents/BAN502-RmdData/Blood.csv")
+```
+
+```{r}
+str(Blood)
+summary(Blood)
+```
+
+Convert the DonatedMarch variable to a factor and recode the variable  
+```{r}
+Blood <- Blood %>% mutate(DonatedMarch = as_factor(as.character(DonatedMarch))) %>%
+  mutate(DonatedMarch = fct_recode(DonatedMarch,
+                             "No" = "0",
+                             "Yes" = "1"))
+str(Blood)
+```
+
+Task 1 - Split the dataset into training (70%) and testing (30%) sets
+```{r}
+set.seed(1234) 
+train.rows = createDataPartition(y = Blood$DonatedMarch, p=0.7, list = FALSE) 
+
+train <- slice(Blood, train.rows)
+test <- slice(Blood, -train.rows)
+```
+
+Task 2 - Create a random forest model on the training set to predict DonatedMarch
+```{r}
+fit_control <- trainControl(method = "cv",  
+                           number = 10) 
+
+set.seed(123)  
+rf_fit <- train(x=as.data.frame(train[,-5]), y=train$DonatedMarch, 
+                  method = "ranger", 
+                  importance = "permutation", 
+                  trControl = fit_control,
+                  num.trees = 100)
+```
+
+Task 3 - Use varImp  
+What is the most important variable in the model?
+TotalDonations is the most important variable in the model.
+What is the least important variable in the model?
+Mnths_Since_Last is the least important variable in the model.
+```{r}
+varImp(rf_fit)
+rf_fit
+```
+Task 4 - Use the model to develop predictions on the training set
+```{r}
+RFpred_train <- predict.train(rf_fit, train)
+head(RFpred_train)
+```
+Task 5 - Use the model to create a confusion matrix using caret's confusionMatrix
+What is the accuracy, sensitivity, and specificity of the model?
+The accuracy of the model equals 90%, which is better than the naive accuracy of 76%.
+The sensitivity of the model equals 61% and the specificity equals 99%.
+```{r}
+confusionMatrix(RFpred_train, train$DonatedMarch, positive = "Yes")
+```
+
+Task 6  
+How does the accuracy of the model compare to the naive model that assumes that all observations are in the majority class?
+The naive accuracy of the model at 76% is much lower than the accuracy, which is 90%, so the model is a much better model than the naive accuracy.
+
+Task 7 - Use the model to develop predictions on the testing set
+```{r}
+RFpred_test <- predict.train(rf_fit, test)
+head(RFpred_test)
+```
+Task 7 - Develop a confusion matrix
+How does the model perform on the testing set?
+The accuracy of the model equals 74%, the sensitivity equals 24% and the specificity equals 90%.
+The naive accuracy at 76% is better than the models accuracy, so this is not a very good model. The model on the testing set does not perform well.
+```{r}
+confusionMatrix(RFpred_test, test$DonatedMarch, positive = "Yes")
+```
+
+Task 8  
+Comment on how this model might be used in the "real-world."
+This model might be used for building finance and investment data models.
+Would you recommend this model for real-world use?
+Yes, I would recommend this model for "real-world" use.

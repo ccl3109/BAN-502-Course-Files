@@ -1,0 +1,98 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+
+### Missing Data  
+
+## Task 1  
+Are there students that are missing multiple pieces of data?
+Yes, Tutorial is missing 1% of its data, Midterm is missing 3% of its data, TakeHome is missing 3% of its data, and Final is missing 4% of its data.  
+
+## Task 2  
+How much data is missing and in what variables?
+There is one case missing Tutorial, one case missing both Midterm and TakeHome, two cases missing Midterm alone, two cases missing only TakeHome, and four cases missing only Final.  
+
+## Task 3  
+Use row-wise deletion of missing values. How many rows remain in this data frame?
+After using row-wise there are now 89 rows remaining.  
+
+## Task 4  
+Use column-wise deletion of missing values from the original data frame. How many columns remain in this data frame?
+After using column-wise there are now 2 columns remaining.  
+
+## Task 5  
+Which approach (Task 3 or Task 4) seems preferable for this dataset? 
+I believe the row-wise approach is the most preferable for this dataset because after performing row-wise there are six columns left to build your model(s) with as opposed to only having two columns after performing the column-wise approach.  
+
+## Task 7  
+Briefly discuss potential issues that could be encountered when working with missing data. Describe situations where imputation may not be advisable.
+Missing data can negatively influence a model and create biased estimates leading to invalid outcomes and present the following problems:
+* reduce the "probability the test will reject the null hypothesis when it is false"
+* cause bias in the "estimation of parameters"
+* reduce the "representation of the samples", and
+* could "complicate the analysis of the study"
+(source https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3668100/)
+
+```{r echo=FALSE}
+options(tidyverse.quiet=TRUE)
+library(tidyverse)
+library(VIM)
+library(mice)
+```
+
+```{r}
+class_grades <- read_csv("C:/Users/timbo/Documents/BAN502-RmdData/class-grades.csv")
+
+```
+
+```{r}
+grades <- read_csv("C:/Users/timbo/Documents/BAN502-RmdData/class-grades.csv")
+str(grades)
+summary(grades)
+```
+
+
+```{r}
+vim_plot <- aggr(grades, numbers = TRUE, prop = c(TRUE, FALSE), cex.axis = .7)
+```
+
+```{r}
+grades <- grades %>% drop_na(Tutorial)
+grades <- grades %>% drop_na(Midterm)
+grades <- grades %>% drop_na(TakeHome)
+grades <- grades %>% drop_na(Final)
+```
+
+```{r}
+vim_plot <- aggr(grades, numbers = TRUE, prop = c(TRUE, FALSE), cex.axis = .7)
+```
+
+```{r}
+grades <- class_grades %>% select(-Tutorial)
+grades <- class_grades %>% select(-Midterm)
+grades <- class_grades %>% select(-TakeHome)
+grades <- class_grades %>% select(-Final)
+```
+
+```{r}
+vim_plot <- aggr(grades, numbers = TRUE, prop = c(TRUE, FALSE), cex.axis = .7)
+```
+## Task 6  
+```{r}
+grades_imp <- mice(grades, m=1, method = 'pmm', seed = 12345)
+summary(grades_imp)
+
+```
+## Task 6  
+```{r}
+densityplot(grades_imp)
+```
+## Task 6  
+```{r}
+grades_complete <- complete(grades_imp)
+summary(grades_complete)
+
+```
+

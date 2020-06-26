@@ -1,0 +1,178 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+
+### Classification Trees  
+
+```{r echo=FALSE}
+library(tidyverse)
+library(caret)
+library(rpart)
+library(rattle)
+library(RColorBrewer)
+```
+
+```{r}
+parole <- read_csv("C:/Users/timbo/Documents/BAN502-RmdData/parole.csv")
+```
+```{r}
+parole <- parole %>% mutate(male = as_factor(as.character(male))) %>%
+  mutate(male = fct_recode(male,
+                             "Female" = "0",
+                             "Male" = "1"))
+
+parole <- parole %>% mutate(race = as_factor(as.character(race))) %>%
+  mutate(race = fct_recode(race,
+                             "White" = "1",
+                             "Otherwise" = "2"))
+
+parole <- parole %>% mutate(state = as_factor(as.character(state))) %>%
+  mutate(state = fct_recode(state,
+                             "Any other state" = "1",
+                             "Kentucky" = "2",
+                             "Louisiana" = "3",
+                             "Virginia" = "4"))
+
+parole <- parole %>% mutate(crime = as_factor(as.character(crime))) %>%
+  mutate(crime = fct_recode(crime,
+                             "Any other crime" = "1",
+                             "Larceny" = "2",
+                             "Drug-related crime" = "3",
+                             "Driving-related crime" = "4"))
+
+parole <- parole %>% mutate(multiple.offenses = as_factor(as.character(multiple.offenses))) %>%
+  mutate(multiple.offenses = fct_recode(multiple.offenses,
+                             "Otherwise" = "0",
+                             "Incarcerated for multiple offenses" = "1"))
+
+parole <- parole %>% mutate(violator = as_factor(as.character(violator))) %>%
+  mutate(violator = fct_recode(violator,
+                             "Completed parole without violation" = "0",
+                             "Violated parole" = "1"))
+```
+
+Task 1 - Split the parole data into training and testing sets  
+```{r}
+train.rows <- createDataPartition(y = parole$violator, p=0.7, list = FALSE)
+set.seed(12345)
+
+train <- slice(parole, train.rows)
+test <- slice(parole, -train.rows)
+```
+
+Task 2 - Create a classification tree  
+```{r}
+tree1 <- rpart(violator~., train, method="class")
+fancyRpartPlot(tree1, tweak = .4, cex=.8)
+```
+
+Task 3  
+For the tree created in Task 2, how would you classify a 40-year-old parolee from Louisiana who served a 5 year prison sentence? Describe how you walk through the classification tree to arrive at the answer.
+Starting at the top of the tree at "state = Any other state, Kentucky, Virginia," and knowing that our parolee is from Louisiana, you should choose "no" which leads you to "multiple.offenses = otherwise." Our parolee did not have multiple offenses, so you would move to the left of the tree, which then leads you to "time.served < 4.8." Our parole's time served equals 5 years, so we would choose "no," and you would move right, which takes you to "Violated parole." Our 40-year-old parolee from Louisiana, who served a 5 year sentence did violate his parole.
+
+Task 4 - Use the printcp function to evaluate tree performance  
+What cp value should be selected?
+The cp value that should be selected is 0.01.
+```{r}
+printcp(tree1)
+plotcp(tree1)
+```
+
+Task 5  
+Which class (category) in the training set is the majority class (ie., has the most observations)?
+The class in the training set that has the most observations is "Completed parole without violation.
+```{r}
+tree2 <- prune(tree1, cp = tree1$cptable[which.min(tree1$cptable["xerror"]), "CP"])
+
+fancyRpartPlot(tree2, tweak = .4, cex=.8)
+```
+
+Task 6 - Develop predictions for the training data  
+```{r}
+treepred1 <- predict(tree1, train, type = "class")
+head(treepred1)
+```
+Task 6 - Use caret's confustionMatrix function to calculate the accuracy, specificity, and sensitivity  
+```{r}
+confusionMatrix(treepred1,train$violator,positive="Completed parole without violation")
+```
+Task 7 - Develop predictions for the testing data  
+```{r}
+treepred2 <- predict(tree1, test, type = "class")
+head(treepred2)
+```
+Task 7 - Use caret's confustionMatrix function to calculate the accuracy, specificity, and sensitivity  
+```{r}
+confusionMatrix(treepred2,test$violator,positive="Completed parole without violation")
+```
+Task 8 - Read in the Blood dataset   
+```{r}
+Blood <- read_csv("C:/Users/timbo/Documents/BAN502-RmdData/Blood.csv")
+```
+Task 8 - Convert the DonatedMarch variable to a factor  
+```{r}
+Blood <- Blood%>% mutate(DonatedMarch = as_factor(as.character(DonatedMarch))) %>%
+  mutate(DonatedMarch = fct_recode(DonatedMarch,
+                             "No" = "0",
+                             "Yes" = "1"))
+```
+
+Task 9 - Split the Blood dataset into training (70%) and testing (30%) sets  
+```{r}
+test.rows <- createDataPartition(y = Blood$DonatedMarch, p=0.7, list = FALSE)
+set.seed(1234)
+
+train2 <- slice(Blood, test.rows)
+test2 <- slice(Blood, -test.rows)
+```
+
+
+Task 9 - Develop a classification tree to predict "DonatedMarch" on the training set
+```{r}
+train_tree1 <- rpart(DonatedMarch~., train2, method="class")
+fancyRpartPlot(train_tree1, tweak = .9, cex=.6)
+```
+
+Task 9 - Evaluate the complexity parameter (cp) selection for this model  
+```{r}
+printcp(train_tree1)
+plotcp(train_tree1)
+```
+
+Task 10 - Prune the tree back to the optimal cp value on the training set
+```{r}
+train_tree2 <- prune(train_tree1, cp = train_tree1$cptable[which.min(train_tree1$cptable["xerror"]), "CP"])
+
+fancyRpartPlot(train_tree2, tweak = .9, cex=.6)
+```
+
+Task 10 - Make predictions on the training set
+```{r}
+treepred2 <- predict(train_tree2, train2, type = "class")
+head(treepred2)
+```
+
+Task 10 - Use the confustionMatrix function on the training set
+```{r}
+confusionMatrix(treepred2,train2$DonatedMarch,positive="Yes")
+```
+
+Task 10 - Prune the tree back to the optimal cp value on the testing set
+```{r}
+test_tree1 <- rpart(DonatedMarch~., test2, method="class")
+fancyRpartPlot(test_tree1)
+```
+
+Task 10 - Make predictions on the testing set
+```{r}
+treepred3 <- predict(test_tree1, test2, type = "class")
+head(treepred3)
+```
+
+Task 10 - Use the confustionMatrix function on the testing set
+```{r}
+confusionMatrix(treepred3,test2$DonatedMarch,positive="Yes")
+```
+

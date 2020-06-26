@@ -1,0 +1,233 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+### Module 2 - Assignment 2
+
+## Langdon, Christy
+
+# Task 1
+Comment as to why we convert "yr", "mnth", and "hr" into factors?
+It is a good idea to convert "yr", "mnth", and "hr" into factors to rename the levels of the factors in order to be more descriptive.
+
+Why not just leave them as numbers?
+Its descriptive nature creates better communique with the end user when explaining results.
+
+**You many find it useful to complete some of the other tasks and then come back to answer this question.
+
+
+# Task 2
+Which of the quantative variables appears to be best correlated with "count"?
+**ignore the "registered" and "casual" variable as the sum of these two variables equals "count."
+
+Atemp (Normalized feeling temperature in Celsius) appears to be the best correlated with "count."
+
+# Task 3
+Conduct a boxplot-based analysis for each of the categorical variables.
+Which variables appear to affect "count"?
+
+
+
+Provide a brief explanation as to why you believe that each variable does or does not affect "count" (use your intution to help you answer this question).
+**Use gridarrange to reduce the space needed for plots
+
+# Task 4
+Use forward stepwise regression to build a multiple linear regression model to predict "count."
+
+What variables are included in your forward model?
+The following variables are included in the forward model; season, yr, mnth, hr, holiday, weekday, workingday, weathersit, temp, atemp, hum, windspeed, and count.
+
+Comment on the quality of the model.
+Does the model match our intuition/common sense?
+Is there evidence of multicollinearity?
+
+
+# Task 5
+Does this model differ from the forward model?
+
+
+# Task 6
+Describe how "workingday" is represented in the model via other variables.
+
+
+# Task 7
+Comment on the usability of this model. Any cautions concerning its potential use?
+
+```{r}
+options(tidyverse.quiet = TRUE)
+library(tidyverse)
+library("GGally")
+library(MASS)
+library(car)
+library(ggplot2)
+library(gridExtra)
+
+```
+
+```{r}
+library(readr)
+bike <- hour <- read_csv("C:/Users/timbo/Documents/BAN502-RmdData/hour.csv")
+View(hour)
+
+```
+```{r}
+bike <- bike %>% mutate(season = as_factor(as.character(season))) %>%
+  mutate(season = fct_recode(season,
+                             "Spring" = "1",
+                             "Summer" = "2",
+                             "Fall" = "3",
+                             "Winter" = "4"))
+
+```
+
+```{r}
+bike <- bike %>% mutate(yr = as_factor(yr))
+str(bike)
+
+```
+
+```{r}
+bike <- bike %>% mutate(mnth = as_factor(mnth))
+str(bike)
+
+```
+
+```{r}
+bike <- bike %>% mutate(hr = as_factor(hr))
+str(bike)
+
+```
+
+```{r}
+bike <- bike %>% mutate(holiday = as_factor(as.character(holiday))) %>%
+  mutate(holiday = fct_recode(holiday,
+                             "NotHoliday" = "0",
+                             "Holiday" = "1"))
+
+```
+
+```{r}
+bike <- bike %>% mutate(workingday = as_factor(as.character(workingday))) %>%
+  mutate(workingday = fct_recode(workingday,
+                             "NotWorkingDay" = "0",
+                             "WorkingDay" = "1"))
+```
+
+```{r}
+bike <- bike %>% mutate(weathersit = as_factor(as.character(weathersit))) %>%
+  mutate(weathersit = fct_recode(weathersit,
+                             "NoPrecip" = "1",
+                             "Misty" = "2",
+                             "LightPrecip" = "3",
+                             "HeavyPrecip" = "4"))
+
+```
+
+```{r}
+bike <- bike %>% mutate(weekday = as_factor(as.character(weekday))) %>%
+  mutate(weekday = fct_recode(weekday,
+                             "Sunday" = "0",
+                             "Monday" = "1",
+                             "Tuesday" = "2",
+                             "Wednesday" = "3",
+                             "Thursday" = "4",
+                             "Friday" = "5",
+                             "Saturday" = "6"))
+
+```
+
+
+```{r}
+season <- ggplot(bike, aes(season, count)) + geom_boxplot()
+
+holiday <- ggplot(bike, aes(holiday, count)) + geom_boxplot()
+
+weekday <- ggplot(bike, aes(weekday, count)) + geom_boxplot()
+
+workingday <- ggplot(bike, aes(workingday, count)) + geom_boxplot()
+
+weathersit <- ggplot(bike, aes(weathersit, count)) + geom_boxplot()
+
+library(gridExtra)
+grid.arrange(season, holiday, weekday, workingday, weathersit, ncol = 2)
+
+```
+
+```{r}
+bike2 <- bike %>%
+  dplyr::select(-c("instant", "dteday", "registered", "casual"))
+
+```
+
+```{r}
+summary(bike2)
+glimpse(bike2)
+
+```
+
+```{r}
+ggplot(bike2, aes(x=count)) +
+  geom_histogram() +
+  theme_bw()
+
+```
+
+```{r}
+ggpairs(bike2, columns = c("season", "holiday", "weekday", "count"))
+ggpairs(bike2, columns = c("workingday", "weathersit", "temp", "windspeed", "count"))
+
+```
+
+```{r The first model uses the variable that is best correlated with "count"}
+ggplot(data = bike) +
+  geom_point(mapping = aes(y = count, x = windspeed)) +
+  theme_bw()
+
+```
+
+```{r}
+model1 <- lm(count ~ windspeed, bike2)
+summary(model1)
+ggplot(bike2, aes(x=windspeed, y=count)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  theme_bw()
+
+```
+
+```{r Create all in model}
+allmodel <- lm(count ~., bike2)
+summary(allmodel)
+
+```
+
+```{r Create a model with all possible predictors}
+emptymodel <- lm(count ~1, bike2)
+summary(emptymodel)
+
+```
+
+```{rd Backward stepwise}
+backmodel <- stepAIC(allmodel, direction = "backward", trace = TRUE)
+summary(backmodel)
+
+```
+
+```{r}
+forwardmodel <- stepAIC(emptymodel, direction = "forward", scope = list(upper=allmodel, lower=emptymodel,
+                        trace = TRUE))
+summary(forwardmodel)
+                        
+```
+
+```{r}
+allmodel <- lm(count ~., bike2)
+summary(allmodel)
+```
+
+```{r}
+ggplot(bike2, aes(x=weathersit, y=count)) + geom_point() +
+  theme_bw()
+```
+

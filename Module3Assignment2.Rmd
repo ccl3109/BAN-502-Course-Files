@@ -1,0 +1,222 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+### Logistic Regression (Classification) with Parole Dataset
+
+```{r echo=FALSE}
+knitr::include_graphics("C:/Users/timbo/Documents/BAN502-RmdData/handcuffed-person.jpg")
+```
+
+```{r echo=FALSE}
+library(tidyverse)
+library(MASS)
+library(caret)
+library(ROCR)
+```
+
+```{r echo=FALSE}
+library(readr)
+parole <- read_csv("C:/Users/timbo/Documents/BAN502-RmdData/parole.csv")
+```
+
+```{r}
+parole <- parole %>% mutate(male = as_factor(as.character(male))) %>%
+  mutate(male = fct_recode(male,
+                             "Female" = "0",
+                             "Male" = "1"))
+
+parole <- parole %>% mutate(race = as_factor(as.character(race))) %>%
+  mutate(race = fct_recode(race,
+                             "White" = "1",
+                             "Otherwise" = "2"))
+
+parole <- parole %>% mutate(state = as_factor(as.character(state))) %>%
+  mutate(state = fct_recode(state,
+                             "Any other state" = "1",
+                             "Kentucky" = "2",
+                             "Louisiana" = "3",
+                             "Virginia" = "4"))
+
+parole <- parole %>% mutate(crime = as_factor(as.character(crime))) %>%
+  mutate(crime = fct_recode(crime,
+                             "Any other crime" = "1",
+                             "Larceny" = "2",
+                             "Drug-related crime" = "3",
+                             "Driving-related crime" = "4"))
+
+parole <- parole %>% mutate(multiple.offenses = as_factor(as.character(multiple.offenses))) %>%
+  mutate(multiple.offenses = fct_recode(multiple.offenses,
+                             "Otherwise" = "0",
+                             "Incarcerated for multiple offenses" = "1"))
+
+parole <- parole %>% mutate(violator = as_factor(as.character(violator))) %>%
+  mutate(violator = fct_recode(violator,
+                             "Completed parole without violation" = "0",
+                             "Violated parole" = "1"))
+```
+
+Split the data into training and testing sets.
+```{r}
+train.rows <- createDataPartition(y = parole$violator, p=0.7, list = FALSE)
+set.seed(12345)
+
+train <- slice(parole, train.rows)
+test <- slice(parole, -train.rows)
+```
+
+##Task 2  
+Which variables in the training set appear to be most predictive of the response variable "violator?"
+The variables in the training data set that appear to be most predictive of the response variable are male, state, max.sentence, multiple.offenses, and crime. For the variable "male," the barplot showed that the male count exceeded females nearly 5 to 1. The "state" that had the highest count of violators was Virginia. The "crime" count for Any other crime was higher than the other less serious crimes, and "multiple.offenses" was highest for Incarcerated for multiple offenses.
+```{r}
+ggplot(train, aes(x = race, fill = violator)) +
+  geom_bar() +
+  theme_bw()
+```
+
+```{r}
+table1 <- table(train$violator, train$race)
+prop.table(table1, margin = 2)
+```
+
+
+```{r}
+ggplot(train, aes(x = state, fill = violator)) +
+  geom_bar() +
+  theme_bw()
+```
+```{r}
+table2 <- table(train$violator, train$state)
+prop.table(table2, margin = 2)
+```
+
+```{r}
+ggplot(train, aes(x = multiple.offenses, fill = violator)) +
+  geom_bar() +
+  theme_bw()
+```
+
+```{r}
+table3  <-table(train$violator, train$multiple.offenses)
+prop.table(table3, margin = 2)
+```
+
+##Task 3  
+There are two states, Louisiana and Virginia, that are significant variables
+If you are in the state of Louisiana you are more likely to violate parole
+If you are in the state of Virginia you are less likely to violate parole
+```{r}
+model1 <- glm(violator ~ state, train, family = "binomial")
+summary(model1)
+```
+##Task 4 
+Significant variables are state and multiple.offense
+If you live in the state of Virginia the less likely you will violate parole
+If you are incarcerated for multiple offenses the more likely you will violate your parole
+```{r}
+allmodel <- glm(violator ~., train, family = "binomial")
+summary(allmodel)
+
+emptymodel <- glm(violator ~1, train, family = "binomial")
+summary(emptymodel)
+```
+Backward stepwise
+```{r}
+backmodel <- stepAIC(allmodel, direction = "backward", trace = TRUE)
+summary(backmodel)
+```
+Forward stepwise
+```{r}
+forwardmodel <- stepAIC(emptymodel, direction = "forward", scope = list(upper=allmodel, lower=emptymodel, trace = TRUE))
+summary(forwardmodel)
+```
+##Task 5  
+Significant variables are state and multiple.offenses
+If you live in the state of Virginia the less likely you will violate parole
+If you are incarcerated for multiple offenses the more likely you will violate your parole
+```{r}
+model1 <- glm(violator ~ state + multiple.offenses + race, train, family = "binomial")
+summary(model1)
+```
+##Task 6  
+The predicted probability of parole violation for Parolee1
+```{r}
+Parolee1 <- data.frame(state = "Louisiana", multiple.offenses = "Incarcerated for multiple offenses",
+                       race = "White")
+predict(forwardmodel, Parolee1, type = "response")
+```
+ 
+The predicted probability of parole violation for Parolee2
+```{r}
+Parolee2 <- data.frame(state = "Kentucky", multiple.offenses = "Otherwise",
+                       race = "Otherwise")
+predict(forwardmodel, Parolee2, type = "response")
+```
+
+
+```{r}
+predictions <- predict(model1, newdata = train, type = "response")
+head(predictions)
+```
+##Task 7  
+```{r}
+RocRpred <- prediction(predictions, train$violator)
+
+RocRperf <- performance(RocRpred, "tpr", "fpr")
+plot(RocRperf, colorize = TRUE, print.cutoffs.at = seq(0, 1, by = 0.1), text.adj = c(-0.2, 1.7))
+```
+##Task 8  
+The accuracy of the model
+```{r}
+as.numeric(performance(RocRpred, "auc")@y.values)
+```
+
+The sensitivity and specificity of the model
+```{r}
+opt.cut = function(perf, pred){
+  cut.ind = mapply(FUN = function(x, y, p){
+    d = (x - 0)^2 + (y - 1)^2
+    ind = which(d == min(d))
+    c(sensitivity = y[[ind]], specificity = 1 -x[[ind]], 
+    cutoff = p[[ind]])
+  }, perf@x.values, perf@y.values, pred@cutoffs)
+}
+print(opt.cut(RocRperf, RocRpred))
+```
+
+```{r}
+table1 <- table(train$violator, predictions > 0.2069629)
+table1
+```
+
+```{r}
+(table1[1,1] + table1[2,2])/nrow(train)
+```
+##Task 9  
+```{r}
+table1 <- table(train$violator, predictions > 0.5)
+table1
+
+(table1[1,1] + table1[2,2])/nrow(train)
+```
+
+```{r}
+table1 <- table(train$violator, predictions > 0.6)
+table1
+
+(table1[1,1] + table1[2,2])/nrow(train)
+```
+
+```{r}
+test_predictions <- predict(forwardmodel, newdata = test, type = "response")
+head(test_predictions)
+```
+##Task 10  
+```{r}
+table1 <- table(test$violator, test_predictions > 0.6)
+
+
+(table1[1,1] + table1[2,2])/nrow(test)
+```
+

@@ -1,0 +1,207 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+## Model Validation
+
+Task 2  
+How many rows of data are in the training set?
+There are 12167 rows in the training set.
+
+How many rows of data are in the testing set?
+There are 5212 rows in the testing set.
+
+Task 3  
+Comment on the quality of the model.
+Significant variables are seasonsummer, seasonwinter, holidayHoliday (weather day is a holiday),
+temp, weathersitMisty, and weathersitLightPrecip. The R squared value for this model on the training set is around 0.6.
+
+Task 4    
+Are there any strange predictions?
+Although weathersitNoPrecip, after creating the linear regression model, shows no significance, it does represent the highest weathersit when completing the prediction function.
+
+Does the distribution of predictions seem reasonable on the training test?
+The distribution of predictions does seem reasonable (ie., significant variables are temp, season=fall, holiday=No, etc.)
+
+Task 5  
+Comment on the predictions.
+For the testing set, significant variables are season-summer, fall, winter; hr-7 to 23;  weekdaySunday; temp; weathersit-Misty and LightPrecip.
+
+Task 6  
+Manually calculate the R-squared value on the testing set. Comment on how this value compares to 
+the model's performance on the training set.
+The R-squared value on the testing set equals .6, which is the same value for the training set.
+
+Task 7  
+Describe how k-fold cross-validation differs from model validation via a training/testing split.
+K-fold cross validation is used to split data into partitions (k "folds"), then evaluate the model 'k' times while holding out 1 fold. K-fold is usually used for large to very large datasets. Model validation can balance class distributions, evaluate models on a training set, but possibly not reduce overfitting enough.
+
+Add Libraries
+```{r}
+library(tidyverse)
+library(MASS)
+library(caret)
+
+```
+
+Read-in the data-set 
+```{r}
+bike <- read_csv("C:/Users/timbo/Documents/BAN502-RmdData/hour.csv")
+
+```
+Build a linear regression model (using the training set).
+```{r echo=FALSE}
+bike <- bike %>% mutate(season = as_factor(as.character(season))) %>%
+  mutate(season = fct_recode(season,
+                              "spring" = "1",
+                              "summer" = "2",
+                              "fall" = "3",
+                              "winter" = "4"))
+
+bike <- bike %>% mutate(yr = as_factor(yr))
+
+bike <- bike %>% mutate(mnth = as_factor(mnth))
+
+bike <- bike %>% mutate(hr = as_factor(hr))
+
+bike <- bike %>% mutate(holiday = as_factor(as.character(holiday))) %>%
+  mutate(holiday = fct_recode(holiday,
+                             "NotHoliday" = "0",
+                             "Holiday" = "1"))
+
+bike <- bike %>% mutate(workingday = as_factor(as.character(workingday))) %>%
+  mutate(workingday = fct_recode(workingday,
+                             "NotWorkingDay" = "0",
+                             "WorkingDay" = "1"))
+
+bike <- bike %>% mutate(weathersit = as_factor(as.character(weathersit))) %>%
+  mutate(weathersit = fct_recode(weathersit,
+                             "NoPrecip" = "1",
+                             "Misty" = "2",
+                             "LightPrecip" = "3",
+                             "HeavyPrecip" = "4"))
+
+bike <- bike %>% mutate(weekday = as_factor(as.character(weekday))) %>%
+  mutate(weekday = fct_recode(weekday,
+                             "Sunday" = "0",
+                             "Monday" = "1",
+                             "Tuesday" = "2",
+                             "Wednesday" = "3",
+                             "Thursday" = "4",
+                             "Friday" = "5",
+                             "Saturday" = "6"))
+str(bike)
+
+```
+Split the data into training and testing sets. 
+```{r}
+train.rows <- createDataPartition(y = bike$count, p=0.7, list = FALSE)
+set.seed(1234)
+
+train <- slice(bike, train.rows)
+test <- slice(bike, -train.rows)
+
+```
+
+Build a linear regression model using the training set.
+```{r}
+model1 <- lm(count ~ season + mnth + hr + holiday + weekday + temp + weathersit, train)
+summary(model1)
+
+```
+Use the predict function to make predictions.
+```{r}
+predict_train = predict(model1, newdata = train, type = "response")
+
+```
+
+Display the first six predictions.
+```{r}
+head(train, n=6)
+
+```
+
+```{r}
+summary(train)
+
+```
+
+```{r}
+ggplot(data = train) +
+  geom_histogram(mapping = aes(x = temp))
+
+```
+
+```{r}
+ggplot(data = train) +
+  geom_histogram(mapping = aes(x = atemp))
+
+```
+
+```{r}
+ggplot(data = train) +
+  geom_histogram(mapping = aes(x = hum))
+
+```
+
+```{r}
+ggplot(data = train) +
+  geom_histogram(mapping = aes(x = windspeed))
+
+```
+
+```{r}
+model1 <- lm(count ~ season + mnth + hr + holiday + weekday + temp + weathersit, test)
+summary(model1)
+```
+
+
+```{r}
+predict_test = predict(model1, newdata = test, type = "response")
+
+```
+
+
+```{r}
+head(test, n=6)
+
+```
+
+```{r}
+summary(test)
+
+```
+```{r}
+ggplot(data = test) +
+  geom_histogram(mapping = aes(x = temp))
+
+```
+```{r}
+ggplot(data = test) +
+  geom_histogram(mapping = aes(x = atemp))
+
+```
+```{r}
+ggplot(data = test) +
+  geom_histogram(mapping = aes(x = hum))
+
+```
+```{r}
+ggplot(data = test) +
+  geom_histogram(mapping = aes(x = windspeed))
+
+```
+```{r}
+predict_test <- predict(model1, newdata = test)
+```
+
+
+```{r}
+SSE = sum((test$count - predict_test)^2)
+SST = sum((test$count - mean(test$count))^2)
+1 - SSE/SST
+
+```
+
+
